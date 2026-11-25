@@ -115,15 +115,64 @@ function moveLine(line) {
     return numbers;
 }
 
-function moveLeft() {
+function moveHorizontal(direction) {
     const nextField = [];
 
     for (let row = 0; row < gameData.size; row++) {
         const start = row * gameData.size;
         const line = field.slice(start, start + gameData.size);
+
+        if (direction === "right") {
+            line.reverse();
+        }
+
         const movedLine = moveLine(line);
 
+        if (direction === "right") {
+            movedLine.reverse();
+        }
+
         nextField.push(...movedLine);
+    }
+
+    const changed = field.some(function (value, index) {
+        return value !== nextField[index];
+    });
+
+    if (!changed) {
+        return;
+    }
+
+    field = nextField;
+    addRandomTile();
+    renderField();
+}
+
+function moveVertical(direction) {
+    const nextField = field.slice();
+
+    for (let column = 0; column < gameData.size; column++) {
+        const line = [];
+
+        for (let row = 0; row < gameData.size; row++) {
+            const index = row * gameData.size + column;
+            line.push(field[index]);
+        }
+
+        if (direction === "down") {
+            line.reverse();
+        }
+
+        const movedLine = moveLine(line);
+
+        if (direction === "down") {
+            movedLine.reverse();
+        }
+
+        for (let row = 0; row < gameData.size; row++) {
+            const index = row * gameData.size + column;
+            nextField[index] = movedLine[row];
+        }
     }
 
     const changed = field.some(function (value, index) {
@@ -158,7 +207,16 @@ restartButton.addEventListener("click", function () {
 document.addEventListener("keydown", function (event) {
     if (event.key === "ArrowLeft") {
         event.preventDefault();
-        moveLeft();
+        moveHorizontal("left");
+    } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveHorizontal("right");
+    } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        moveVertical("up");
+    } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        moveVertical("down");
     }
 });
 
