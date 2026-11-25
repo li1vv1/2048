@@ -1,5 +1,6 @@
 let field = Array(gameData.size * gameData.size).fill(0);
 let currentScore = 0;
+let previousState = null;
 
 const main = document.createElement("main");
 main.className = "game";
@@ -116,6 +117,11 @@ function moveLine(line) {
 }
 
 function moveHorizontal(direction) {
+    const stateBeforeMove = {
+        field: field.slice(),
+        score: currentScore
+    };
+
     const nextField = [];
 
     for (let row = 0; row < gameData.size; row++) {
@@ -143,12 +149,20 @@ function moveHorizontal(direction) {
         return;
     }
 
+    previousState = stateBeforeMove;
+    undoButton.disabled = false;
+
     field = nextField;
     addRandomTile();
     renderField();
 }
 
 function moveVertical(direction) {
+    const stateBeforeMove = {
+        field: field.slice(),
+        score: currentScore
+    };
+
     const nextField = field.slice();
 
     for (let column = 0; column < gameData.size; column++) {
@@ -183,6 +197,9 @@ function moveVertical(direction) {
         return;
     }
 
+    previousState = stateBeforeMove;
+    undoButton.disabled = false;
+
     field = nextField;
     addRandomTile();
     renderField();
@@ -191,6 +208,7 @@ function moveVertical(direction) {
 function startGame() {
     field = Array(gameData.size * gameData.size).fill(0);
     currentScore = 0;
+    previousState = null;
     undoButton.disabled = true;
 
     for (let index = 0; index < gameData.initialTileCount; index++) {
@@ -202,6 +220,20 @@ function startGame() {
 
 restartButton.addEventListener("click", function () {
     startGame();
+});
+
+undoButton.addEventListener("click", function () {
+    if (previousState === null) {
+        return;
+    }
+
+    field = previousState.field.slice();
+    currentScore = previousState.score;
+
+    previousState = null;
+    undoButton.disabled = true;
+
+    renderField();
 });
 
 document.addEventListener("keydown", function (event) {
