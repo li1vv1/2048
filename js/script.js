@@ -1,6 +1,7 @@
 let field = Array(gameData.size * gameData.size).fill(0);
 let currentScore = 0;
 let previousState = null;
+let gameOver = false;
 
 const main = document.createElement("main");
 main.className = "game";
@@ -46,6 +47,12 @@ actions.append(restartButton, undoButton, recordsButton);
 const board = document.createElement("div");
 board.className = "game__board";
 main.append(board);
+
+const gameOverMessage = document.createElement("p");
+gameOverMessage.textContent = "Игра окончена! Больше нет доступных ходов.";
+gameOverMessage.className = "game__message";
+gameOverMessage.hidden = true;
+main.append(gameOverMessage);
 
 const cells = [];
 
@@ -117,6 +124,10 @@ function moveLine(line) {
 }
 
 function moveHorizontal(direction) {
+    if (gameOver) {
+        return;
+    }
+
     const stateBeforeMove = {
         field: field.slice(),
         score: currentScore
@@ -154,10 +165,15 @@ function moveHorizontal(direction) {
 
     field = nextField;
     addRandomTile();
+    checkGameOver();
     renderField();
 }
 
 function moveVertical(direction) {
+    if (gameOver) {
+        return;
+    }
+
     const stateBeforeMove = {
         field: field.slice(),
         score: currentScore
@@ -202,14 +218,54 @@ function moveVertical(direction) {
 
     field = nextField;
     addRandomTile();
+    checkGameOver();
     renderField();
+}
+
+function isGameOver() {
+    if (field.includes(0)) {
+        return false;
+    }
+
+    for (let row = 0; row < gameData.size; row++) {
+        for (let column = 0; column < gameData.size; column++) {
+            const index = row * gameData.size + column;
+
+            if (column < gameData.size - 1) {
+                if (field[index] === field[index + 1]) {
+                    return false;
+                }
+            }
+
+            if (row < gameData.size - 1) {
+                if (field[index] === field[index + gameData.size]) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+function checkGameOver() {
+    gameOver = isGameOver();
+
+    if (gameOver) {
+        previousState = null;
+        undoButton.disabled = true;
+        gameOverMessage.hidden = false;
+    }
 }
 
 function startGame() {
     field = Array(gameData.size * gameData.size).fill(0);
     currentScore = 0;
     previousState = null;
+    gameOver = false;
+
     undoButton.disabled = true;
+    gameOverMessage.hidden = true;
 
     for (let index = 0; index < gameData.initialTileCount; index++) {
         addRandomTile();
@@ -223,7 +279,7 @@ restartButton.addEventListener("click", function () {
 });
 
 undoButton.addEventListener("click", function () {
-    if (previousState === null) {
+    if (previousState === null || gameOver) {
         return;
     }
 
