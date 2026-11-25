@@ -87,8 +87,79 @@ function renderField() {
     scoreValue.textContent = currentScore;
 }
 
-for (let index = 0; index < gameData.initialTileCount; index++) {
-    addRandomTile();
+function moveLine(line) {
+    const numbers = line.filter(function (value) {
+        return value !== 0;
+    });
+
+    let index = 0;
+
+    while (index < numbers.length - 1) {
+        if (numbers[index] === numbers[index + 1]) {
+            numbers[index] = numbers[index] * 2;
+            currentScore = currentScore + numbers[index];
+            numbers.splice(index + 1, 1);
+
+            if (index > 0) {
+                index--;
+            }
+        } else {
+            index++;
+        }
+    }
+
+    while (numbers.length < gameData.size) {
+        numbers.push(0);
+    }
+
+    return numbers;
 }
 
-renderField();
+function moveLeft() {
+    const nextField = [];
+
+    for (let row = 0; row < gameData.size; row++) {
+        const start = row * gameData.size;
+        const line = field.slice(start, start + gameData.size);
+        const movedLine = moveLine(line);
+
+        nextField.push(...movedLine);
+    }
+
+    const changed = field.some(function (value, index) {
+        return value !== nextField[index];
+    });
+
+    if (!changed) {
+        return;
+    }
+
+    field = nextField;
+    addRandomTile();
+    renderField();
+}
+
+function startGame() {
+    field = Array(gameData.size * gameData.size).fill(0);
+    currentScore = 0;
+    undoButton.disabled = true;
+
+    for (let index = 0; index < gameData.initialTileCount; index++) {
+        addRandomTile();
+    }
+
+    renderField();
+}
+
+restartButton.addEventListener("click", function () {
+    startGame();
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveLeft();
+    }
+});
+
+startGame();
