@@ -1,3 +1,6 @@
+let field = Array(gameData.size * gameData.size).fill(0);
+let currentScore = 0;
+
 const main = document.createElement("main");
 main.className = "game";
 document.body.append(main);
@@ -43,8 +46,49 @@ const board = document.createElement("div");
 board.className = "game__board";
 main.append(board);
 
-for (let index = 0; index < 16; index++) {
+const cells = [];
+
+for (let index = 0; index < field.length; index++) {
     const cell = document.createElement("div");
     cell.className = "game__cell";
     board.append(cell);
+    cells.push(cell);
 }
+
+function addRandomTile() {
+    const emptyCells = [];
+
+    field.forEach(function (value, index) {
+        if (value === 0) {
+            emptyCells.push(index);
+        }
+    });
+
+    if (emptyCells.length === 0) {
+        return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * emptyCells.length);
+    const cellIndex = emptyCells[randomIndex];
+
+    const valueIndex = Math.floor(Math.random() * gameData.tileValues.length);
+    field[cellIndex] = gameData.tileValues[valueIndex];
+}
+
+function renderField() {
+    field.forEach(function (value, index) {
+        if (value === 0) {
+            cells[index].textContent = "";
+        } else {
+            cells[index].textContent = value;
+        }
+    });
+
+    scoreValue.textContent = currentScore;
+}
+
+for (let index = 0; index < gameData.initialTileCount; index++) {
+    addRandomTile();
+}
+
+renderField();
