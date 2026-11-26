@@ -147,6 +147,8 @@ button {
     .game__board {
         gap: 8px;
         padding: 8px;
+        touch-action: none;
+        user-select: none;
     }
         .records {
         padding: 16px;

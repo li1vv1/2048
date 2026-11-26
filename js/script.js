@@ -484,6 +484,57 @@ closeRecordsButton.addEventListener("click", function () {
     recordsDialog.close();
 });
 
+board.addEventListener("touchstart", function (event) {
+    touchStartX = null;
+    touchStartY = null;
+
+    if (gameOver || recordsDialog.open || event.touches.length !== 1) {
+        return;
+    }
+
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+}, { passive: true });
+
+board.addEventListener("touchend", function (event) {
+    if (touchStartX === null || touchStartY === null) {
+        return;
+    }
+
+    const deltaX = event.changedTouches[0].clientX - touchStartX;
+    const deltaY = event.changedTouches[0].clientY - touchStartY;
+
+    touchStartX = null;
+    touchStartY = null;
+
+    if (gameOver || recordsDialog.open) {
+        return;
+    }
+
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 30) {
+        return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0) {
+            moveHorizontal("right");
+        } else {
+            moveHorizontal("left");
+        }
+    } else {
+        if (deltaY > 0) {
+            moveVertical("down");
+        } else {
+            moveVertical("up");
+        }
+    }
+});
+
+board.addEventListener("touchcancel", function () {
+    touchStartX = null;
+    touchStartY = null;
+});
+
 document.addEventListener("keydown", function (event) {
     if (event.target === nameInput || recordsDialog.open) {
         return;
