@@ -90,6 +90,27 @@ saveRecordButton.type = "submit";
 saveRecordButton.className = "game__button";
 recordForm.append(saveRecordButton);
 
+const recordsDialog = document.createElement("dialog");
+recordsDialog.className = "records";
+main.append(recordsDialog);
+
+const recordsTitle = document.createElement("h2");
+recordsTitle.textContent = "Таблица рекордов";
+recordsTitle.id = "records-title";
+recordsDialog.append(recordsTitle);
+
+recordsDialog.setAttribute("aria-labelledby", "records-title");
+
+const recordsContent = document.createElement("div");
+recordsContent.className = "records__content";
+recordsDialog.append(recordsContent);
+
+const closeRecordsButton = document.createElement("button");
+closeRecordsButton.textContent = "Закрыть";
+closeRecordsButton.type = "button";
+closeRecordsButton.className = "game__button";
+recordsDialog.append(closeRecordsButton);
+
 const cells = [];
 
 for (let index = 0; index < field.length; index++) {
@@ -160,7 +181,7 @@ function moveLine(line) {
 }
 
 function moveHorizontal(direction) {
-    if (gameOver) {
+    if (gameOver || recordsDialog.open) {
         return;
     }
 
@@ -206,7 +227,7 @@ function moveHorizontal(direction) {
 }
 
 function moveVertical(direction) {
-    if (gameOver) {
+    if (gameOver || recordsDialog.open) {
         return;
     }
 
@@ -295,6 +316,59 @@ function checkGameOver() {
     }
 }
 
+function renderRecords() {
+    recordsContent.replaceChildren();
+
+    if (records.length === 0) {
+        const message = document.createElement("p");
+        message.textContent = "Пока нет сохранённых результатов.";
+        recordsContent.append(message);
+        return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "records__table";
+
+    const head = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+
+    const nameHeader = document.createElement("th");
+    nameHeader.textContent = "Имя";
+    nameHeader.scope = "col";
+
+    const scoreHeader = document.createElement("th");
+    scoreHeader.textContent = "Очки";
+    scoreHeader.scope = "col";
+
+    const dateHeader = document.createElement("th");
+    dateHeader.textContent = "Дата";
+    dateHeader.scope = "col";
+
+    headerRow.append(nameHeader, scoreHeader, dateHeader);
+    head.append(headerRow);
+
+    const body = document.createElement("tbody");
+
+    records.forEach(function (record) {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = record.name;
+
+        const scoreCell = document.createElement("td");
+        scoreCell.textContent = record.score;
+
+        const dateCell = document.createElement("td");
+        dateCell.textContent = new Date(record.date).toLocaleString("ru-RU");
+
+        row.append(nameCell, scoreCell, dateCell);
+        body.append(row);
+    });
+
+    table.append(head, body);
+    recordsContent.append(table);
+}
+
 function startGame() {
     field = Array(gameData.size * gameData.size).fill(0);
     currentScore = 0;
@@ -321,7 +395,7 @@ restartButton.addEventListener("click", function () {
 });
 
 undoButton.addEventListener("click", function () {
-    if (previousState === null || gameOver) {
+    if (previousState === null || gameOver || recordsDialog.open) {
         return;
     }
 
@@ -380,8 +454,17 @@ nameInput.addEventListener("input", function () {
     nameInput.setCustomValidity("");
 });
 
+recordsButton.addEventListener("click", function () {
+    renderRecords();
+    recordsDialog.showModal();
+});
+
+closeRecordsButton.addEventListener("click", function () {
+    recordsDialog.close();
+});
+
 document.addEventListener("keydown", function (event) {
-    if (event.target === nameInput) {
+    if (event.target === nameInput || recordsDialog.open) {
         return;
     }
 
