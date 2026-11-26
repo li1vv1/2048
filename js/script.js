@@ -2,6 +2,17 @@ let field = Array(gameData.size * gameData.size).fill(0);
 let currentScore = 0;
 let previousState = null;
 let gameOver = false;
+let records = [];
+
+try {
+    records = JSON.parse(localStorage.getItem("2048-records")) || [];
+
+    if (!Array.isArray(records)) {
+        records = [];
+    }
+} catch {
+    records = [];
+}
 
 const main = document.createElement("main");
 main.className = "game";
@@ -53,6 +64,31 @@ gameOverMessage.textContent = "Игра окончена! Больше нет д
 gameOverMessage.className = "game__message";
 gameOverMessage.hidden = true;
 main.append(gameOverMessage);
+
+const recordForm = document.createElement("form");
+recordForm.className = "record-form";
+recordForm.hidden = true;
+main.append(recordForm);
+
+const nameLabel = document.createElement("label");
+nameLabel.textContent = "Твоё имя";
+nameLabel.htmlFor = "player-name";
+recordForm.append(nameLabel);
+
+const nameInput = document.createElement("input");
+nameInput.id = "player-name";
+nameInput.type = "text";
+nameInput.name = "playerName";
+nameInput.maxLength = 30;
+nameInput.required = true;
+nameInput.className = "record-form__input";
+recordForm.append(nameInput);
+
+const saveRecordButton = document.createElement("button");
+saveRecordButton.textContent = "Сохранить результат";
+saveRecordButton.type = "submit";
+saveRecordButton.className = "game__button";
+recordForm.append(saveRecordButton);
 
 const cells = [];
 
@@ -255,6 +291,7 @@ function checkGameOver() {
         previousState = null;
         undoButton.disabled = true;
         gameOverMessage.hidden = false;
+        recordForm.hidden = false;
     }
 }
 
@@ -266,6 +303,11 @@ function startGame() {
 
     undoButton.disabled = true;
     gameOverMessage.hidden = true;
+    gameOverMessage.textContent = "Игра окончена! Больше нет доступных ходов.";
+
+    recordForm.hidden = true;
+    recordForm.reset();
+    nameInput.setCustomValidity("");
 
     for (let index = 0; index < gameData.initialTileCount; index++) {
         addRandomTile();
@@ -292,7 +334,57 @@ undoButton.addEventListener("click", function () {
     renderField();
 });
 
+recordForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    if (!gameOver || recordForm.hidden) {
+        return;
+    }
+
+    const playerName = nameInput.value.trim();
+
+    if (playerName === "") {
+        nameInput.setCustomValidity("Введи имя, а не только пробелы.");
+        nameInput.reportValidity();
+        return;
+    }
+
+    const record = {
+        name: playerName,
+        score: currentScore,
+        date: new Date().toISOString()
+    };
+
+    const nextRecords = records.slice();
+    nextRecords.push(record);
+
+    nextRecords.sort(function (a, b) {
+        return b.score - a.score;
+    });
+
+    const topRecords = nextRecords.slice(0, 10);
+
+    try {
+        localStorage.setItem("2048-records", JSON.stringify(topRecords));
+    } catch {
+        gameOverMessage.textContent = "Не удалось сохранить результат. Попробуй ещё раз.";
+        return;
+    }
+
+    records = topRecords;
+    recordForm.hidden = true;
+    gameOverMessage.textContent = "Ваш рекорд сохранён!";
+});
+
+nameInput.addEventListener("input", function () {
+    nameInput.setCustomValidity("");
+});
+
 document.addEventListener("keydown", function (event) {
+    if (event.target === nameInput) {
+        return;
+    }
+
     if (event.key === "ArrowLeft") {
         event.preventDefault();
         moveHorizontal("left");
