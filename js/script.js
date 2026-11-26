@@ -159,10 +159,24 @@ function saveGame() {
 
 function renderField() {
     field.forEach(function (value, index) {
+        cells[index].className = "game__cell";
+        cells[index].style.backgroundColor = "";
+
         if (value === 0) {
             cells[index].textContent = "";
         } else {
             cells[index].textContent = value;
+            cells[index].classList.add("game__cell--filled");
+            cells[index].classList.add("game__cell--" + value);
+
+            if (value >= 128) {
+                cells[index].classList.add("game__cell--large");
+            }
+
+            if (value > 2048) {
+                cells[index].style.backgroundColor =
+                    "hsl(" + (Math.log2(value) * 37 % 360) + ", 45%, 28%)";
+            }
         }
     });
 
