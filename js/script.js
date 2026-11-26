@@ -2,6 +2,7 @@ let field = Array(gameData.size * gameData.size).fill(0);
 let currentScore = 0;
 let previousState = null;
 let gameOver = false;
+let recordSaved = false;
 let records = [];
 
 try {
@@ -140,6 +141,22 @@ function addRandomTile() {
     field[cellIndex] = gameData.tileValues[valueIndex];
 }
 
+function saveGame() {
+    const state = {
+        field: field,
+        score: currentScore,
+        previousState: previousState,
+        gameOver: gameOver,
+        recordSaved: recordSaved
+    };
+
+    try {
+        localStorage.setItem("2048-game", JSON.stringify(state));
+    } catch (error) {
+        console.error("Не удалось сохранить игру:", error);
+    }
+}
+
 function renderField() {
     field.forEach(function (value, index) {
         if (value === 0) {
@@ -150,6 +167,7 @@ function renderField() {
     });
 
     scoreValue.textContent = currentScore;
+    saveGame();
 }
 
 function moveLine(line) {
@@ -312,7 +330,7 @@ function checkGameOver() {
         previousState = null;
         undoButton.disabled = true;
         gameOverMessage.hidden = false;
-        recordForm.hidden = false;
+        recordForm.hidden = recordSaved;
     }
 }
 
@@ -374,6 +392,7 @@ function startGame() {
     currentScore = 0;
     previousState = null;
     gameOver = false;
+    recordSaved = false;
 
     undoButton.disabled = true;
     gameOverMessage.hidden = true;
@@ -411,7 +430,7 @@ undoButton.addEventListener("click", function () {
 recordForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    if (!gameOver || recordForm.hidden) {
+    if (!gameOver || recordSaved || recordForm.hidden) {
         return;
     }
 
@@ -446,8 +465,10 @@ recordForm.addEventListener("submit", function (event) {
     }
 
     records = topRecords;
+    recordSaved = true;
     recordForm.hidden = true;
     gameOverMessage.textContent = "Ваш рекорд сохранён!";
+    saveGame();
 });
 
 nameInput.addEventListener("input", function () {
