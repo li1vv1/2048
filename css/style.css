@@ -59,22 +59,33 @@ button {
     outline-offset: 3px;
 }
 .game__board {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
     padding: 10px;
     border-radius: 12px;
     background-color: #234638;
+    touch-action: none;
+    user-select: none;
 }
 .game__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     aspect-ratio: 1;
     border-radius: 8px;
     background-color: #e8e1d5;
-        display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 32px;
     font-weight: bold;
+}
+.game__tiles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.game__tiles .game__cell {
+    position: absolute;
 }
 .game__message {
     margin: 20px 0 0;
@@ -186,10 +197,8 @@ button {
     .game__board {
         gap: 8px;
         padding: 8px;
-        touch-action: none;
-        user-select: none;
     }
-        .records {
+    .records {
         padding: 16px;
     }
     .records h2 {

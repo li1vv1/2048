@@ -4,6 +4,8 @@ let previousState = null;
 let gameOver = false;
 let recordSaved = false;
 let records = [];
+let touchStartX = null;
+let touchStartY = null;
 
 try {
     records = JSON.parse(localStorage.getItem("2048-records")) || [];
@@ -121,6 +123,10 @@ for (let index = 0; index < field.length; index++) {
     cells.push(cell);
 }
 
+const tilesLayer = document.createElement("div");
+tilesLayer.className = "game__tiles";
+board.append(tilesLayer);
+
 function addRandomTile() {
     const emptyCells = [];
 
@@ -158,26 +164,33 @@ function saveGame() {
 }
 
 function renderField() {
+    tilesLayer.replaceChildren();
+
     field.forEach(function (value, index) {
-        cells[index].className = "game__cell";
-        cells[index].style.backgroundColor = "";
-
         if (value === 0) {
-            cells[index].textContent = "";
-        } else {
-            cells[index].textContent = value;
-            cells[index].classList.add("game__cell--filled");
-            cells[index].classList.add("game__cell--" + value);
-
-            if (value >= 128) {
-                cells[index].classList.add("game__cell--large");
-            }
-
-            if (value > 2048) {
-                cells[index].style.backgroundColor =
-                    "hsl(" + (Math.log2(value) * 37 % 360) + ", 45%, 28%)";
-            }
+            return;
         }
+
+        const tile = document.createElement("div");
+        tile.className = "game__cell game__cell--filled";
+        tile.classList.add("game__cell--" + value);
+        tile.textContent = value;
+
+        if (value >= 128) {
+            tile.classList.add("game__cell--large");
+        }
+
+        if (value > 2048) {
+            tile.style.backgroundColor =
+                "hsl(" + (Math.log2(value) * 37 % 360) + ", 45%, 28%)";
+        }
+
+        tile.style.left = cells[index].offsetLeft + "px";
+        tile.style.top = cells[index].offsetTop + "px";
+        tile.style.width = cells[index].offsetWidth + "px";
+        tile.style.height = cells[index].offsetHeight + "px";
+
+        tilesLayer.append(tile);
     });
 
     scoreValue.textContent = currentScore;
@@ -401,12 +414,73 @@ function renderRecords() {
     recordsContent.append(table);
 }
 
+function isValidState(state) {
+    if (!state || !Array.isArray(state.field)) {
+        return false;
+    }
+
+    if (state.field.length !== gameData.size * gameData.size) {
+        return false;
+    }
+
+    const validCells = state.field.every(function (value) {
+        return Number.isSafeInteger(value) &&
+            (value === 0 || (value >= 2 && Number.isInteger(Math.log2(value))));
+    });
+
+    return validCells &&
+        Number.isSafeInteger(state.score) &&
+        state.score >= 0;
+}
+
+function restoreGame() {
+    let state;
+
+    try {
+        state = JSON.parse(localStorage.getItem("2048-game"));
+    } catch {
+        return false;
+    }
+
+    if (!isValidState(state)) {
+        return false;
+    }
+
+    field = state.field.slice();
+    currentScore = state.score;
+    gameOver = isGameOver();
+    recordSaved = gameOver && state.recordSaved === true;
+    previousState = null;
+
+    if (!gameOver && isValidState(state.previousState)) {
+        previousState = {
+            field: state.previousState.field.slice(),
+            score: state.previousState.score
+        };
+    }
+
+    undoButton.disabled = previousState === null || gameOver;
+    gameOverMessage.hidden = !gameOver;
+    recordForm.hidden = !gameOver || recordSaved;
+
+    if (recordSaved) {
+        gameOverMessage.textContent = "Ваш рекорд сохранён!";
+    } else {
+        gameOverMessage.textContent = "Игра окончена! Больше нет доступных ходов.";
+    }
+
+    renderField();
+    return true;
+}
+
 function startGame() {
     field = Array(gameData.size * gameData.size).fill(0);
     currentScore = 0;
     previousState = null;
     gameOver = false;
     recordSaved = false;
+    touchStartX = null;
+    touchStartY = null;
 
     undoButton.disabled = true;
     gameOverMessage.hidden = true;
@@ -490,6 +564,9 @@ nameInput.addEventListener("input", function () {
 });
 
 recordsButton.addEventListener("click", function () {
+    touchStartX = null;
+    touchStartY = null;
+
     renderRecords();
     recordsDialog.showModal();
 });
@@ -569,4 +646,10 @@ document.addEventListener("keydown", function (event) {
     }
 });
 
-startGame();
+window.addEventListener("resize", function () {
+    renderField();
+});
+
+if (!restoreGame()) {
+    startGame();
+}
