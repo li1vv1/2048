@@ -6,6 +6,7 @@ let recordSaved = false;
 let records = [];
 let touchStartX = null;
 let touchStartY = null;
+let isAnimating = false;
 
 try {
     records = JSON.parse(localStorage.getItem("2048-records")) || [];
@@ -175,6 +176,7 @@ function renderField() {
         tile.className = "game__cell game__cell--filled";
         tile.classList.add("game__cell--" + value);
         tile.textContent = value;
+        tile.dataset.index = index;
 
         if (value >= 128) {
             tile.classList.add("game__cell--large");
@@ -198,17 +200,29 @@ function renderField() {
 }
 
 function moveLine(line) {
-    const numbers = line.filter(function (value) {
-        return value !== 0;
+    const tiles = [];
+
+    line.forEach(function (value, index) {
+        if (value !== 0) {
+            tiles.push({
+                value: value,
+                sources: [index]
+            });
+        }
     });
 
     let index = 0;
 
-    while (index < numbers.length - 1) {
-        if (numbers[index] === numbers[index + 1]) {
-            numbers[index] = numbers[index] * 2;
-            currentScore = currentScore + numbers[index];
-            numbers.splice(index + 1, 1);
+    while (index < tiles.length - 1) {
+        if (tiles[index].value === tiles[index + 1].value) {
+            tiles[index].value = tiles[index].value * 2;
+            currentScore = currentScore + tiles[index].value;
+
+            tiles[index].sources = tiles[index].sources.concat(
+                tiles[index + 1].sources
+            );
+
+            tiles.splice(index + 1, 1);
 
             if (index > 0) {
                 index--;
@@ -218,15 +232,120 @@ function moveLine(line) {
         }
     }
 
-    while (numbers.length < gameData.size) {
-        numbers.push(0);
+    const values = [];
+    const movements = [];
+
+    tiles.forEach(function (tile, targetIndex) {
+        values.push(tile.value);
+
+        tile.sources.forEach(function (sourceIndex) {
+            movements.push({
+                from: sourceIndex,
+                to: targetIndex,
+                merged: tile.sources.length > 1
+            });
+        });
+    });
+
+    while (values.length < gameData.size) {
+        values.push(0);
     }
 
-    return numbers;
+    return {
+        values: values,
+        movements: movements
+    };
+}
+
+async function animateMove(movements, nextField, stateBeforeMove) {
+    isAnimating = true;
+    restartButton.disabled = true;
+    undoButton.disabled = true;
+    recordsButton.disabled = true;
+
+    previousState = stateBeforeMove;
+    field = nextField;
+    addRandomTile();
+    checkGameOver();
+    saveGame();
+
+    const animations = [];
+
+    movements.forEach(function (movement) {
+        const tile = tilesLayer.querySelector(
+            '[data-index="' + movement.from + '"]'
+        );
+
+        if (!tile || movement.from === movement.to) {
+            return;
+        }
+
+        const deltaX = cells[movement.to].offsetLeft -
+            cells[movement.from].offsetLeft;
+        const deltaY = cells[movement.to].offsetTop -
+            cells[movement.from].offsetTop;
+
+        const animation = tile.animate([
+            {
+                transform: "translate(0, 0)"
+            },
+            {
+                transform: "translate(" + deltaX + "px, " + deltaY + "px)"
+            }
+        ], {
+            duration: 160,
+            easing: "ease-in-out",
+            fill: "forwards"
+        });
+
+        animations.push(animation.finished);
+    });
+
+    await Promise.allSettled(animations);
+
+    renderField();
+
+    const mergedCells = [];
+
+    movements.forEach(function (movement) {
+        if (movement.merged && !mergedCells.includes(movement.to)) {
+            mergedCells.push(movement.to);
+        }
+    });
+
+    const mergeAnimations = [];
+
+    mergedCells.forEach(function (index) {
+        const tile = tilesLayer.querySelector(
+            '[data-index="' + index + '"]'
+        );
+
+        if (tile) {
+            const animation = tile.animate([
+                { transform: "scale(1)" },
+                { transform: "scale(1.12)" },
+                { transform: "scale(1)" }
+            ], {
+                duration: 140,
+                easing: "ease-out"
+            });
+
+            mergeAnimations.push(animation.finished);
+        }
+    });
+
+    await Promise.allSettled(mergeAnimations);
+
+    isAnimating = false;
+    restartButton.disabled = false;
+    recordsButton.disabled = false;
+    undoButton.disabled = previousState === null || gameOver;
+
+    renderField();
 }
 
 function moveHorizontal(direction) {
-    if (gameOver || recordsDialog.open) {
+    if (gameOver || recordsDialog.open || isAnimating) {
         return;
     }
 
@@ -236,6 +355,7 @@ function moveHorizontal(direction) {
     };
 
     const nextField = [];
+    const movements = [];
 
     for (let row = 0; row < gameData.size; row++) {
         const start = row * gameData.size;
@@ -245,7 +365,24 @@ function moveHorizontal(direction) {
             line.reverse();
         }
 
-        const movedLine = moveLine(line);
+        const result = moveLine(line);
+        const movedLine = result.values;
+
+        result.movements.forEach(function (movement) {
+            let from = movement.from;
+            let to = movement.to;
+
+            if (direction === "right") {
+                from = gameData.size - 1 - from;
+                to = gameData.size - 1 - to;
+            }
+
+            movements.push({
+                from: start + from,
+                to: start + to,
+                merged: movement.merged
+            });
+        });
 
         if (direction === "right") {
             movedLine.reverse();
@@ -262,17 +399,11 @@ function moveHorizontal(direction) {
         return;
     }
 
-    previousState = stateBeforeMove;
-    undoButton.disabled = false;
-
-    field = nextField;
-    addRandomTile();
-    checkGameOver();
-    renderField();
+    animateMove(movements, nextField, stateBeforeMove);
 }
 
 function moveVertical(direction) {
-    if (gameOver || recordsDialog.open) {
+    if (gameOver || recordsDialog.open || isAnimating) {
         return;
     }
 
@@ -282,6 +413,7 @@ function moveVertical(direction) {
     };
 
     const nextField = field.slice();
+    const movements = [];
 
     for (let column = 0; column < gameData.size; column++) {
         const line = [];
@@ -295,7 +427,24 @@ function moveVertical(direction) {
             line.reverse();
         }
 
-        const movedLine = moveLine(line);
+        const result = moveLine(line);
+        const movedLine = result.values;
+
+        result.movements.forEach(function (movement) {
+            let from = movement.from;
+            let to = movement.to;
+
+            if (direction === "down") {
+                from = gameData.size - 1 - from;
+                to = gameData.size - 1 - to;
+            }
+
+            movements.push({
+                from: from * gameData.size + column,
+                to: to * gameData.size + column,
+                merged: movement.merged
+            });
+        });
 
         if (direction === "down") {
             movedLine.reverse();
@@ -315,13 +464,7 @@ function moveVertical(direction) {
         return;
     }
 
-    previousState = stateBeforeMove;
-    undoButton.disabled = false;
-
-    field = nextField;
-    addRandomTile();
-    checkGameOver();
-    renderField();
+    animateMove(movements, nextField, stateBeforeMove);
 }
 
 function isGameOver() {
@@ -498,11 +641,15 @@ function startGame() {
 }
 
 restartButton.addEventListener("click", function () {
+    if (isAnimating) {
+        return;
+    }
+
     startGame();
 });
 
 undoButton.addEventListener("click", function () {
-    if (previousState === null || gameOver || recordsDialog.open) {
+    if (previousState === null || gameOver || recordsDialog.open || isAnimating) {
         return;
     }
 
@@ -518,7 +665,7 @@ undoButton.addEventListener("click", function () {
 recordForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    if (!gameOver || recordSaved || recordForm.hidden) {
+    if (!gameOver || recordSaved || recordForm.hidden || isAnimating) {
         return;
     }
 
@@ -564,6 +711,10 @@ nameInput.addEventListener("input", function () {
 });
 
 recordsButton.addEventListener("click", function () {
+    if (isAnimating) {
+        return;
+    }
+
     touchStartX = null;
     touchStartY = null;
 
@@ -579,7 +730,7 @@ board.addEventListener("touchstart", function (event) {
     touchStartX = null;
     touchStartY = null;
 
-    if (gameOver || recordsDialog.open || event.touches.length !== 1) {
+    if (gameOver || recordsDialog.open || isAnimating || event.touches.length !== 1) {
         return;
     }
 
@@ -598,7 +749,7 @@ board.addEventListener("touchend", function (event) {
     touchStartX = null;
     touchStartY = null;
 
-    if (gameOver || recordsDialog.open) {
+    if (gameOver || recordsDialog.open || isAnimating) {
         return;
     }
 
@@ -647,7 +798,9 @@ document.addEventListener("keydown", function (event) {
 });
 
 window.addEventListener("resize", function () {
-    renderField();
+    if (!isAnimating) {
+        renderField();
+    }
 });
 
 if (!restoreGame()) {
