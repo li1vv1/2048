@@ -3,23 +3,29 @@
 }
 body {
     margin: 0;
-    padding: 24px 16px;
+    padding: 40px 28px;
     min-height: 100vh;
     font-family: Arial, sans-serif;
     font-size: 18px;
-    background-color: #153e32;
-    color: #234638;
+    background-color: #0a553d;
+    color: #104230;
+    background-image: url("../images/1.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 button {
     font-family: inherit;
 }
 .game {
+    position: relative;
     max-width: 460px;
     margin: 0 auto;
     padding: 24px;
-    border: 2px solid #d4b56a;
+    border: 2px solid #f7c985;
     border-radius: 20px;
-    background-color: #fff8ec;
+    background-color: #f3deb2;
 }
 .game__title {
     margin: 0 0 16px;
@@ -42,20 +48,16 @@ button {
     padding: 10px 12px;
     border: none;
     border-radius: 8px;
-    background-color: #a52a36;
+    background-color: #a31221;
     color: white;
     font-size: 16px;
     cursor: pointer;
 }
-.game__button:hover:not(:disabled) {
-    background-color: #84212b;
-}
 .game__button:disabled {
-    opacity: 0.5;
     cursor: default;
 }
 .game__button:focus-visible {
-    outline: 3px solid #234638;
+    outline: 3px solid #2e0202;
     outline-offset: 3px;
 }
 .game__board {
@@ -87,8 +89,11 @@ button {
 .game__tiles .game__cell {
     position: absolute;
 }
+.game__over {
+    margin-top: 20px;
+}
 .game__message {
-    margin: 20px 0 0;
+    margin: 0;
     line-height: 1.5;
 }
 .record-form {
@@ -158,35 +163,78 @@ button {
     background-color: #2c5545;
 }
 .game__cell--8 {
-    background-color: #986c32;
+    background-color: #d6b80d;
 }
 .game__cell--16 {
-    background-color: #87552e;
+    background-color: #cc9600;
 }
 .game__cell--32 {
-    background-color: #a52a36;
+    background-color: #cc1d2e;
 }
 .game__cell--64 {
-    background-color: #84212b;
+    background-color: #6e0d17;
 }
 .game__cell--128 {
-    background-color: #703448;
+    background-color: #942d4f;
 }
 .game__cell--256 {
-    background-color: #5b3c58;
+    background-color: #611759;
 }
 .game__cell--512 {
-    background-color: #365e68;
+    background-color: #2b89a0;
 }
 .game__cell--1024 {
-    background-color: #344b72;
+    background-color: #1c3e79;
 }
 .game__cell--2048 {
-    background-color: #705d20;
+    background-color: #29b100;
+}
+.game__garland {
+    position: absolute;
+    top: -22px;
+    left: -22px;
+    width: calc(100% + 44px);
+    height: calc(100% + 44px);
+    overflow: visible;
+    pointer-events: none;
+}
+.game__wire {
+    fill: none;
+    stroke: #123b2b;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.game__socket {
+    fill: #153e32;
+}
+.game__bulb {
+    fill: currentColor;
+    animation: garland-glow 2.4s ease-in-out infinite alternate;
+}
+.game__bulb--0 {
+    color: #ff163c;
+}
+.game__bulb--1 {
+    color: #ffd000;
+}
+.game__bulb--2 {
+    color: #00ed78;
+}
+.game__bulb--3 {
+    color: #00aaff;
+}
+@keyframes garland-glow {
+    from {
+        filter: brightness(0.35) drop-shadow(0 0 0 currentColor);
+    }
+    to {
+        filter: brightness(1.1) drop-shadow(0 0 5px currentColor);
+    }
 }
 @media (max-width: 480px) {
     body {
-        padding: 16px 12px;
+        padding: 32px 28px;
     }
     .game {
         padding: 16px;
@@ -198,6 +246,12 @@ button {
         gap: 8px;
         padding: 8px;
     }
+    .game__cell {
+        font-size: 26px;
+    }
+    .game__cell--large {
+        font-size: 18px;
+    }
     .records {
         padding: 16px;
     }
@@ -207,5 +261,10 @@ button {
     .records__table th, .records__table td {
         padding: 8px;
         font-size: 14px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .game__bulb {
+        animation: none;
     }
 }
